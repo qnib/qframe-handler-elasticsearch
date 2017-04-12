@@ -8,6 +8,7 @@ import (
 
 	"github.com/qnib/qframe-types"
 	"github.com/OwnLocal/goes"
+	"fmt"
 )
 
 const (
@@ -44,27 +45,22 @@ func (eo *Elasticsearch) pushToBuffer() {
 }
 
 func (eo *Elasticsearch) createESClient() (conn *goes.Connection) {
-	host, err := eo.Cfg.StringOr("handler.elasticsearch.host", "localhost")
-	if err != nil {
-		panic(err)
-	}
-	port, err := eo.Cfg.StringOr("handler.elasticsearch.port", "9200")
-	if err != nil {
-		panic(err)
-	}
+	host, _ := eo.Cfg.StringOr(fmt.Sprintf("handler.%s.host", eo.Name), "localhost")
+	port, _ := eo.Cfg.StringOr(fmt.Sprintf("handler.%s.port", eo.Name), "9200")
 	conn = goes.NewConnection(host, port)
 	return
 }
 
-func createIndex(conn *goes.Connection) (err error) {
+func (eo *Elasticsearch) createIndex(conn *goes.Connection) (err error) {
+	idxTemplate, _ := eo.Cfg.StringOr(fmt.Sprintf("handler.%s.index-template", eo.Name), "logstash-2016-11-27")
 	l := NewLogstash(1,0)
 	idxCfg, err := l.GetConfig()
 	if err != nil {
 		return err
 	} else {
-		resp, err := conn.CreateIndex("logstash-2016-11-27", idxCfg)
+		resp, err := conn.CreateIndex(idxTemplate, idxCfg)
 		if err != nil {
-			log.Printf("[EE] Creating index: Response:%s || %v", resp, err)
+			log.Printf("[EE] Creating index-format '%s': Response:%s || %v", idxTemplate, resp, err)
 			return err
 		}
 
