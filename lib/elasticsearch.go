@@ -94,7 +94,7 @@ func (eo Elasticsearch) Run() {
 	log.Printf("[II] Start elasticsearch handler v%s", version)
 	go eo.pushToBuffer()
 	conn := eo.createESClient()
-	createIndex(conn)
+	eo.createIndex(conn)
 	for {
 		msg := <-eo.buffer
 		err := indexDoc(conn, msg)
