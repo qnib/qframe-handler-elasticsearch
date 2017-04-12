@@ -29,7 +29,7 @@ func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasti
 	}
 	p.Name = name
 	p.Version = version
-	idx, _ := cfg.StringOr(fmt.Sprintf("handler.%s.index-template", eo.Name), "logstash-2016-11-27")
+	idx, _ := cfg.StringOr(fmt.Sprintf("handler.%s.index-template", name), "logstash-2016-11-27")
 	p.index = 	idx
 
 	return p
