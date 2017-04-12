@@ -44,8 +44,17 @@ func (eo *Elasticsearch) pushToBuffer() {
 		val := bg.Recv()
 		switch val.(type) {
 		case qtypes.QMsg:
-			log := val.(qtypes.QMsg)
-			eo.buffer <- log
+			msg := val.(qtypes.QMsg)
+			inStr, err := eo.Cfg.String(fmt.Sprintf("handler.%s.inputs", eo.Name))
+			if err != nil {
+				inStr = ""
+			}
+			inputs := strings.Split(inStr, ",")
+			if len(inputs) != 0 && ! qutils.IsInput(inputs, msg.Source) {
+				//fmt.Printf("%s %-7s sType:%-6s sName:%-10s[%d] DROPED : %s\n", qm.TimeString(), qm.LogString(), qm.Type, qm.Source, qm.SourceID, qm.Msg)
+				continue
+			}
+			eo.buffer <- msg
 		}
 	}
 }
@@ -102,16 +111,7 @@ func (eo *Elasticsearch) Run() {
 	eo.createIndex(conn)
 	for {
 		msg := <-eo.buffer
-		inStr, err := eo.Cfg.String(fmt.Sprintf("handler.%s.inputs", eo.Name))
-		if err != nil {
-			inStr = ""
-		}
-		inputs := strings.Split(inStr, ",")
-		if len(inputs) != 0 && ! qutils.IsInput(inputs, qm.Source) {
-			//fmt.Printf("%s %-7s sType:%-6s sName:%-10s[%d] DROPED : %s\n", qm.TimeString(), qm.LogString(), qm.Type, qm.Source, qm.SourceID, qm.Msg)
-			continue
-		}
-		err = eo.indexDoc(conn, msg)
+		err := eo.indexDoc(conn, msg)
 		if err != nil {
 			log.Printf("[EE] Failed to index msg: %s || %v", msg, err)
 		}
