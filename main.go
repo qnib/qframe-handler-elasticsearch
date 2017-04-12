@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	version = "0.0.0"
+	version = "0.1.0"
 )
 // Elasticsearch holds a buffer and the initial information from the server
 type Elasticsearch struct {
