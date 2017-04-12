@@ -39,22 +39,22 @@
 			"revisionTime": "2017-03-04T07:09:54Z"
 		},
 		{
-			"checksumSHA1": "CtM89hypQfD0LOp6f2gKJvlbV9I=",
+			"checksumSHA1": "UzP7VVPUMCU6bTCh7CCQ6d0hhlU=",
 			"path": "github.com/qnib/qframe-handler-elasticsearch",
-			"revision": "742a1a5eac6c05a3a3ac45b6a71f01ce85cc4e1c",
-			"revisionTime": "2017-04-12T07:20:22Z"
+			"revision": "52f2bc0ae88d99e95d091e130ef3118996d0f21d",
+			"revisionTime": "2017-04-12T08:14:07Z"
 		},
 		{
 			"checksumSHA1": "Vmd+ZCcLC5dljMT55LR9KYwYz1Q=",
 			"path": "github.com/qnib/qframe-handler-elasticsearch/mappings",
-			"revision": "742a1a5eac6c05a3a3ac45b6a71f01ce85cc4e1c",
-			"revisionTime": "2017-04-12T07:20:22Z"
+			"revision": "52f2bc0ae88d99e95d091e130ef3118996d0f21d",
+			"revisionTime": "2017-04-12T08:14:07Z"
 		},
 		{
-			"checksumSHA1": "yUXZj9kOpp/CIOD+33+oB71BMOQ=",
+			"checksumSHA1": "QAFgagBI0ADCyXX1YDn3FDHJVMk=",
 			"path": "github.com/qnib/qframe-types",
-			"revision": "d6a3955b3dca552ae77017f3ae2d1ba4e02b6a86",
-			"revisionTime": "2017-04-12T08:09:24Z"
+			"revision": "e4e1b7a6d0532a32f4f740f002717bca39fddd4e",
+			"revisionTime": "2017-04-12T08:13:49Z"
 		},
 		{
 			"checksumSHA1": "E4pS76cF5huNrgXLvhDe80076BI=",
