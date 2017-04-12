@@ -5,10 +5,12 @@ import (
 	"time"
 	"github.com/zpatrick/go-config"
 	"log"
-
-	"github.com/qnib/qframe-types"
 	"github.com/OwnLocal/goes"
 	"fmt"
+	"strings"
+
+	"github.com/qnib/qframe-types"
+	"github.com/qnib/qframe-utils"
 )
 
 const (
@@ -100,7 +102,16 @@ func (eo *Elasticsearch) Run() {
 	eo.createIndex(conn)
 	for {
 		msg := <-eo.buffer
-		err := eo.indexDoc(conn, msg)
+		inStr, err := eo.Cfg.String(fmt.Sprintf("handler.%s.inputs", eo.Name))
+		if err != nil {
+			inStr = ""
+		}
+		inputs := strings.Split(inStr, ",")
+		if len(inputs) != 0 && ! qutils.IsInput(inputs, qm.Source) {
+			//fmt.Printf("%s %-7s sType:%-6s sName:%-10s[%d] DROPED : %s\n", qm.TimeString(), qm.LogString(), qm.Type, qm.Source, qm.SourceID, qm.Msg)
+			continue
+		}
+		err = eo.indexDoc(conn, msg)
 		if err != nil {
 			log.Printf("[EE] Failed to index msg: %s || %v", msg, err)
 		}
