@@ -18,6 +18,7 @@ const (
 type Elasticsearch struct {
 	qtypes.Plugin
 	buffer chan qtypes.QMsg
+	index string
 }
 
 // NewElasticsearch returns an initial instance
@@ -29,6 +30,9 @@ func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasti
 	fmt.Printf("Plugin-name: %s\n", name)
 	p.Name = name
 	p.Version = version
+	idx, _ := cfg.StringOr(fmt.Sprintf("handler.%s.index-template", eo.Name), "logstash-2016-11-27")
+	p.index = 	idx
+
 	return p
 }
 
@@ -53,16 +57,14 @@ func (eo *Elasticsearch) createESClient() (conn *goes.Connection) {
 }
 
 func (eo *Elasticsearch) createIndex(conn *goes.Connection) (err error) {
-	log.Println(fmt.Sprintf("handler.%s.index-template", eo.Name))
-	idxTemplate, _ := eo.Cfg.StringOr(fmt.Sprintf("handler.%s.index-template", eo.Name), "logstash-2016-11-27")
 	l := NewLogstash(1,0)
 	idxCfg, err := l.GetConfig()
 	if err != nil {
 		return err
 	} else {
-		resp, err := conn.CreateIndex(idxTemplate, idxCfg)
+		resp, err := conn.CreateIndex(eo.index, idxCfg)
 		if err != nil {
-			log.Printf("[EE] Creating index-format '%s': Response:%s || %v", idxTemplate, resp, err)
+			log.Printf("[EE] Creating index-format '%s': Response:%s || %v", eo.index, resp, err)
 			return err
 		}
 
@@ -70,10 +72,10 @@ func (eo *Elasticsearch) createIndex(conn *goes.Connection) (err error) {
 	return err
 }
 
-func indexDoc(conn *goes.Connection, msg qtypes.QMsg) error {
+func (eo *Elasticsearch) indexDoc(conn *goes.Connection, msg qtypes.QMsg) error {
 	now := time.Now()
 	d := goes.Document{
-		Index: "logstash-2016-11-27",
+		Index: eo.index,
 		Type:  "log",
 		Fields: map[string]interface{}{
 			"Timestamp": now.Format("2006-01-02T15:04:05.999999-07:00"),
@@ -92,14 +94,14 @@ func indexDoc(conn *goes.Connection, msg qtypes.QMsg) error {
 }
 
 // Run pushes the logs to elasticsearch
-func (eo Elasticsearch) Run() {
+func (eo *Elasticsearch) Run() {
 	log.Printf("[II] Start elasticsearch handler v%s", version)
 	go eo.pushToBuffer()
 	conn := eo.createESClient()
 	eo.createIndex(conn)
 	for {
 		msg := <-eo.buffer
-		err := indexDoc(conn, msg)
+		err := eo.indexDoc(conn, msg)
 		if err != nil {
 			log.Printf("[EE] Failed to index msg: %s || %v", msg, err)
 		}
