@@ -45,12 +45,6 @@
 			"revisionTime": "2017-04-12T08:16:24Z"
 		},
 		{
-			"checksumSHA1": "Vmd+ZCcLC5dljMT55LR9KYwYz1Q=",
-			"path": "github.com/qnib/qframe-handler-elasticsearch/mappings",
-			"revision": "12800ee9d7d1a285d7955ab2e190db9180f82b1f",
-			"revisionTime": "2017-04-12T08:16:24Z"
-		},
-		{
 			"checksumSHA1": "QAFgagBI0ADCyXX1YDn3FDHJVMk=",
 			"path": "github.com/qnib/qframe-types",
 			"revision": "e4e1b7a6d0532a32f4f740f002717bca39fddd4e",
