@@ -39,16 +39,16 @@
 			"revisionTime": "2017-03-04T07:09:54Z"
 		},
 		{
-			"checksumSHA1": "UzP7VVPUMCU6bTCh7CCQ6d0hhlU=",
+			"checksumSHA1": "URAyyz2TsZvdaxCL2dzdq/g38KE=",
 			"path": "github.com/qnib/qframe-handler-elasticsearch",
-			"revision": "52f2bc0ae88d99e95d091e130ef3118996d0f21d",
-			"revisionTime": "2017-04-12T08:14:07Z"
+			"revision": "12800ee9d7d1a285d7955ab2e190db9180f82b1f",
+			"revisionTime": "2017-04-12T08:16:24Z"
 		},
 		{
 			"checksumSHA1": "Vmd+ZCcLC5dljMT55LR9KYwYz1Q=",
 			"path": "github.com/qnib/qframe-handler-elasticsearch/mappings",
-			"revision": "52f2bc0ae88d99e95d091e130ef3118996d0f21d",
-			"revisionTime": "2017-04-12T08:14:07Z"
+			"revision": "12800ee9d7d1a285d7955ab2e190db9180f82b1f",
+			"revisionTime": "2017-04-12T08:16:24Z"
 		},
 		{
 			"checksumSHA1": "QAFgagBI0ADCyXX1YDn3FDHJVMk=",

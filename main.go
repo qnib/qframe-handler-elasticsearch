@@ -1,4 +1,4 @@
-package qframe_handler_elasticsearch
+package main
 
 import (
 	"net/url"
