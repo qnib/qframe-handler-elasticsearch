@@ -21,11 +21,14 @@ type Elasticsearch struct {
 }
 
 // NewElasticsearch returns an initial instance
-func NewElasticsearch(qChan qtypes.QChan, cfg config.Config) Elasticsearch {
-	return Elasticsearch{
+func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasticsearch {
+	p := Elasticsearch{
 		Plugin: qtypes.NewPlugin(qChan, cfg),
 		buffer: make(chan qtypes.QMsg, 1000),
 	}
+	p.Name = name
+	p.Version = version
+	return p
 }
 
 // Takes log from framework and buffers it in elasticsearch buffer
