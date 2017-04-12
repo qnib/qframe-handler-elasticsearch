@@ -52,6 +52,7 @@ func (eo *Elasticsearch) createESClient() (conn *goes.Connection) {
 }
 
 func (eo *Elasticsearch) createIndex(conn *goes.Connection) (err error) {
+	log.Println(fmt.Sprintf("handler.%s.index-template", eo.Name))
 	idxTemplate, _ := eo.Cfg.StringOr(fmt.Sprintf("handler.%s.index-template", eo.Name), "logstash-2016-11-27")
 	l := NewLogstash(1,0)
 	idxCfg, err := l.GetConfig()
