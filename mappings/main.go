@@ -1,4 +1,4 @@
-package mappings
+package qframe_handler_elasticsearch
 
 type Settings struct {
 	NumShards int "json:`index.number_of_shards`"
