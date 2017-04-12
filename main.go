@@ -11,6 +11,9 @@ import (
 	"github.com/qnib/qframe-handler-elasticsearch/mappings"
 )
 
+const (
+	version = "0.0.0"
+)
 // Elasticsearch holds a buffer and the initial information from the server
 type Elasticsearch struct {
 	qtypes.Plugin
@@ -90,6 +93,7 @@ func indexDoc(conn *goes.Connection, msg qtypes.QMsg) error {
 
 // Run pushes the logs to elasticsearch
 func (eo Elasticsearch) Run() {
+	log.Printf("[II] Start elasticsearch handler v%s", version)
 	go eo.pushToBuffer()
 	conn := eo.createESClient()
 	createIndex(conn)
