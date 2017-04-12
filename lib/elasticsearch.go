@@ -8,7 +8,6 @@ import (
 
 	"github.com/qnib/qframe-types"
 	"github.com/OwnLocal/goes"
-	"github.com/qnib/qframe-handler-elasticsearch/mappings"
 )
 
 const (
@@ -58,7 +57,7 @@ func (eo *Elasticsearch) createESClient() (conn *goes.Connection) {
 }
 
 func createIndex(conn *goes.Connection) (err error) {
-	l := mappings.NewLogstash(1,0)
+	l := NewLogstash(1,0)
 	idxCfg, err := l.GetConfig()
 	if err != nil {
 		return err
