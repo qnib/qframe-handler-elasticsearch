@@ -1,4 +1,4 @@
-package mappings
+package qframe_handler_elasticsearch
 
 import (
 	"log"
