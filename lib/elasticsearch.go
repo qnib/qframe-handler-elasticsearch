@@ -26,6 +26,7 @@ func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasti
 		Plugin: qtypes.NewPlugin(qChan, cfg),
 		buffer: make(chan qtypes.QMsg, 1000),
 	}
+	fmt.Printf("Plugin-name: %s\n", name)
 	p.Name = name
 	p.Version = version
 	return p
