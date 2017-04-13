@@ -24,7 +24,7 @@ type Elasticsearch struct {
 	indexPrefix string
 	indexName		string
 	last   			time.Time
-	cli 	 			*goes.Client
+	cli 	 		*goes.Connection
 }
 
 // NewElasticsearch returns an initial instance
@@ -71,7 +71,7 @@ func (eo *Elasticsearch) pushToBuffer() {
 func (eo *Elasticsearch) createESClient() (err error) {
 	host, _ := eo.Cfg.StringOr(fmt.Sprintf("handler.%s.host", eo.Name), "localhost")
 	port, _ := eo.Cfg.StringOr(fmt.Sprintf("handler.%s.port", eo.Name), "9200")
-	eo.cli = goes.NewClient(host, port)
+	eo.cli = goes.NewConnection(host, port)
 	return
 }
 
