@@ -1,22 +1,22 @@
 package qframe_handler_elasticsearch
 
 import (
-	"log"
 	"encoding/json"
+	"log"
 )
 
-
 type Logstash struct {
-	settings Settings "json:`settings`"
-	mappings interface{} "json:`mappings`"
+	Settings interface{} `json:"settings"`
+	Mappings interface{} `json:"mappings"`
 }
+
 func NewLogstash(shards, replicas int) Logstash {
 	return Logstash{
-		settings: Settings{
-			NumShards: 1,
-			NumReplicas: 0,
+		Settings: map[string]interface{}{
+			"index.number_of_shards":   shards,
+			"index.number_of_replicas": replicas,
 		},
-		mappings: map[string]interface{}{
+		Mappings: map[string]interface{}{
 			"_default_": map[string]interface{}{
 				"_source": map[string]interface{}{
 					"enabled": true,
@@ -27,7 +27,6 @@ func NewLogstash(shards, replicas int) Logstash {
 			},
 		},
 	}
-
 }
 
 func (l *Logstash) GetConfig() (interface{}, error) {
