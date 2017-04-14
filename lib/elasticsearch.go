@@ -47,36 +47,40 @@ func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasti
 }
 
 // Takes log from framework and buffers it in elasticsearch buffer
-func (eo *Elasticsearch) pushToBuffer() {
-	bg := eo.QChan.Data.Join()
-	inStr, err := eo.Cfg.String(fmt.Sprintf("handler.%s.inputs", eo.Name))
+func (p *Elasticsearch) pushToBuffer() {
+	bg := p.QChan.Data.Join()
+	inStr, err := p.Cfg.String(fmt.Sprintf("handler.%s.inputs", p.Name))
 	if err != nil {
 		inStr = ""
 	}
 	inputs := strings.Split(inStr, ",")
+	srcSuccess, _ := p.Cfg.BoolOr(fmt.Sprintf("handler.%s.source-success", p.Name), true)
 	for {
 		val := bg.Recv()
 		switch val.(type) {
 		case qtypes.QMsg:
 			msg := val.(qtypes.QMsg)
-			if len(inputs) != 0 && !qutils.IsInput(inputs, msg.Source) {
+			if len(inputs) != 0 && !qutils.IsLastSource(inputs, msg.Source) {
 				continue
 			}
-			eo.buffer <- msg
+			if msg.SourceSuccess != srcSuccess {
+				continue
+			}
+			p.buffer <- msg
 		}
 	}
 }
 
-func (eo *Elasticsearch) createESClient() (err error) {
-	host, _ := eo.Cfg.StringOr(fmt.Sprintf("handler.%s.host", eo.Name), "localhost")
-	port, _ := eo.Cfg.StringOr(fmt.Sprintf("handler.%s.port", eo.Name), "9200")
+func (p *Elasticsearch) createESClient() (err error) {
+	host, _ := p.Cfg.StringOr(fmt.Sprintf("handler.%s.host", p.Name), "localhost")
+	port, _ := p.Cfg.StringOr(fmt.Sprintf("handler.%s.port", p.Name), "9200")
 	now := time.Now()
-	eo.indexName = fmt.Sprintf("%s-%04d-%02d-%02d", eo.indexPrefix, now.Year(), now.Month(), now.Day())
-	eo.conn = goes.NewConnection(host, port)
+	p.indexName = fmt.Sprintf("%s-%04d-%02d-%02d", p.indexPrefix, now.Year(), now.Month(), now.Day())
+	p.conn = goes.NewConnection(host, port)
 	return
 }
 
-func (eo *Elasticsearch) createIndex() (err error) {
+func (p *Elasticsearch) createIndex() (err error) {
 	idxCfg := map[string]interface{}{
   	"settings": map[string]interface{}{
       "index.number_of_shards":   1,
@@ -93,64 +97,65 @@ func (eo *Elasticsearch) createIndex() (err error) {
       },
     },
 	}
-	indices := []string{eo.indexName}
-	idxExist, _ := eo.conn.IndicesExist(indices)
+	indices := []string{p.indexName}
+	idxExist, _ := p.conn.IndicesExist(indices)
 	if idxExist {
-		log.Printf("[DD] Index '%s' already exists", eo.indexName)
+		log.Printf("[DD] Index '%s' already exists", p.indexName)
 		return err
 	}
 	log.Printf("[DD] Index '%v' does not exists", indices)
-	_, err = eo.conn.CreateIndex(eo.indexName, idxCfg)
+	_, err = p.conn.CreateIndex(p.indexName, idxCfg)
 	if err != nil {
-		log.Printf("[WW] Index '%s' could not be created", eo.indexName)
+		log.Printf("[WW] Index '%s' could not be created", p.indexName)
 		return err
 	}
-	log.Printf("[DD] Created index '%s'.", eo.indexName)
+	log.Printf("[DD] Created index '%s'.", p.indexName)
 	return err
 }
 
-func (eo *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
+func (p *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
 	now := time.Now()
-	if eo.last.Day() != now.Day() {
-		eo.indexName = fmt.Sprintf("%s-%04d-%02d-%02d", eo.indexPrefix, now.Year(), now.Month(), now.Day())
-		eo.createIndex()
-		eo.last = now
+	if p.last.Day() != now.Day() {
+		p.indexName = fmt.Sprintf("%s-%04d-%02d-%02d", p.indexPrefix, now.Year(), now.Month(), now.Day())
+		p.createIndex()
+		p.last = now
 	}
 	data := map[string]interface{}{
-		"msg_version": msg.QmsgVersion,
-		"Timestamp": msg.Time.Format("2006-01-02T15:04:05.999999-07:00"),
-		"msg":       msg.Msg,
-		"source":    msg.Source,
-		"type":      msg.Type,
-		"host":      msg.Host,
-		"Level":     msg.Level,
+		"msg_version": 	msg.QmsgVersion,
+		"Timestamp": 	msg.Time.Format("2006-01-02T15:04:05.999999-07:00"),
+		"msg":       	msg.Msg,
+		"source":    	msg.Source,
+		"source_path":  msg.SourcePath,
+		"type":      	msg.Type,
+		"host":      	msg.Host,
+		"Level":     	msg.Level,
 	}
-	for k, v := range msg.KV {
-		data[k] = v
+	if len(msg.KV) != 0 {
+		data[msg.Source] = msg.KV
 	}
 	d := goes.Document{
-		Index: eo.indexName,
+		Index: p.indexName,
 		Type:  "log",
 		Fields: data,
 	}
 	extraArgs := make(url.Values, 1)
 	//extraArgs.Set("ttl", "86400000")
-	response, err := eo.conn.Index(d, extraArgs)
+	response, err := p.conn.Index(d, extraArgs)
 	_ = response
 	//fmt.Printf("%s | %s\n", d, response.Error)
 	return err
 }
 
 // Run pushes the logs to elasticsearch
-func (eo *Elasticsearch) Run() {
-	log.Printf("[II] Start elasticsearch handler: %sv%s",eo.Name, version)
-	go eo.pushToBuffer()
-	err := eo.createESClient()
-	eo.createIndex()
+func (p *Elasticsearch) Run() {
+	log.Printf("[II] Start elasticsearch handler: %sv%s", p.Name, version)
+	go p.pushToBuffer()
+	err := p.createESClient()
+	p.createIndex()
 	_ = err
 	for {
-		msg := <-eo.buffer
-		err := eo.indexDoc(msg)
+		msg := <-p.buffer
+		err := p.indexDoc(msg)
 		if err != nil {
 			log.Printf("[EE] Failed to index msg: %s || %v", msg, err)
 		}
