@@ -24,7 +24,7 @@ type Elasticsearch struct {
 	indexPrefix string
 	indexName		string
 	last   			time.Time
-	cli 	 		*goes.Connection
+	conn 	 		*goes.Connection
 }
 
 // NewElasticsearch returns an initial instance
@@ -49,18 +49,17 @@ func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasti
 // Takes log from framework and buffers it in elasticsearch buffer
 func (eo *Elasticsearch) pushToBuffer() {
 	bg := eo.QChan.Data.Join()
+	inStr, err := eo.Cfg.String(fmt.Sprintf("handler.%s.inputs", eo.Name))
+	if err != nil {
+		inStr = ""
+	}
+	inputs := strings.Split(inStr, ",")
 	for {
 		val := bg.Recv()
 		switch val.(type) {
 		case qtypes.QMsg:
 			msg := val.(qtypes.QMsg)
-			inStr, err := eo.Cfg.String(fmt.Sprintf("handler.%s.inputs", eo.Name))
-			if err != nil {
-				inStr = ""
-			}
-			inputs := strings.Split(inStr, ",")
 			if len(inputs) != 0 && !qutils.IsInput(inputs, msg.Source) {
-				//fmt.Printf("%s %-7s sType:%-6s sName:%-10s[%d] DROPED : %s\n", qm.TimeString(), qm.LogString(), qm.Type, qm.Source, qm.SourceID, qm.Msg)
 				continue
 			}
 			eo.buffer <- msg
@@ -71,16 +70,13 @@ func (eo *Elasticsearch) pushToBuffer() {
 func (eo *Elasticsearch) createESClient() (err error) {
 	host, _ := eo.Cfg.StringOr(fmt.Sprintf("handler.%s.host", eo.Name), "localhost")
 	port, _ := eo.Cfg.StringOr(fmt.Sprintf("handler.%s.port", eo.Name), "9200")
-	eo.cli = goes.NewConnection(host, port)
+	now := time.Now()
+	eo.indexName = fmt.Sprintf("%s-%04d-%02d-%02d", eo.indexPrefix, now.Year(), now.Month(), now.Day())
+	eo.conn = goes.NewConnection(host, port)
 	return
 }
 
 func (eo *Elasticsearch) createIndex() (err error) {
-	/*l := NewLogstash(1, 0)
-	idxCfg, err := l.GetConfig()
-	if err != nil {
-		return err
-	}*/
 	idxCfg := map[string]interface{}{
   	"settings": map[string]interface{}{
       "index.number_of_shards":   1,
@@ -97,16 +93,14 @@ func (eo *Elasticsearch) createIndex() (err error) {
       },
     },
 	}
-	/*indices := []string{eo.indexName}
-	idxExist, _ := eo.cli.IndicesExist(indices)
+	indices := []string{eo.indexName}
+	idxExist, _ := eo.conn.IndicesExist(indices)
 	if idxExist {
 		log.Printf("[DD] Index '%s' already exists", eo.indexName)
 		return err
 	}
 	log.Printf("[DD] Index '%v' does not exists", indices)
-	resp, err := eo.cli.CreateIndex(eo.indexName, idxCfg)
-	*/
-	_, err = eo.cli.CreateIndex(eo.indexName, idxCfg)
+	_, err = eo.conn.CreateIndex(eo.indexName, idxCfg)
 	if err != nil {
 		log.Printf("[WW] Index '%s' could not be created", eo.indexName)
 		return err
@@ -126,16 +120,19 @@ func (eo *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
 		Index: eo.indexName,
 		Type:  "log",
 		Fields: map[string]interface{}{
-			"Timestamp": now.Format("2006-01-02T15:04:05.999999-07:00"),
+			"_msg_version": msg.qmsgVersion,
+			"Timestamp": msg.Time.Format("2006-01-02T15:04:05.999999-07:00"),
 			"msg":       msg.Msg,
 			"source":    msg.Source,
 			"type":      msg.Type,
 			"host":      msg.Host,
+			"Level":     msg.Level,
+			"kv":		 msg.KV,
 		},
 	}
 	extraArgs := make(url.Values, 1)
 	//extraArgs.Set("ttl", "86400000")
-	response, err := eo.cli.Index(d, extraArgs)
+	response, err := eo.conn.Index(d, extraArgs)
 	_ = response
 	//fmt.Printf("%s | %s\n", d, response.Error)
 	return err
@@ -143,9 +140,10 @@ func (eo *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
 
 // Run pushes the logs to elasticsearch
 func (eo *Elasticsearch) Run() {
-	log.Printf("[II] Start elasticsearch handler v%s", version)
+	log.Printf("[II] Start elasticsearch handler: %sv%s",eo.Name, version)
 	go eo.pushToBuffer()
 	err := eo.createESClient()
+	eo.createIndex()
 	_ = err
 	//cleanEs, _ := eo.Cfg.BoolOr(fmt.Sprintf("handler.%s.remove-index", eo.Name), false)
 	for {
