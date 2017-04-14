@@ -20,11 +20,11 @@ const (
 // Elasticsearch holds a buffer and the initial information from the server
 type Elasticsearch struct {
 	qtypes.Plugin
-	buffer 			chan qtypes.QMsg
-	indexPrefix string
-	indexName		string
-	last   			time.Time
-	conn 	 		*goes.Connection
+	buffer 		chan qtypes.QMsg
+	indexPrefix	string
+	indexName	string
+	last   		time.Time
+	conn 	 	*goes.Connection
 }
 
 // NewElasticsearch returns an initial instance
@@ -127,7 +127,6 @@ func (eo *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
 	}
 	for k, v := range msg.KV {
 		data[k] = v
-		//fmt.Printf("%+15s: %s\n", k, v)
 	}
 	d := goes.Document{
 		Index: eo.indexName,
@@ -149,7 +148,6 @@ func (eo *Elasticsearch) Run() {
 	err := eo.createESClient()
 	eo.createIndex()
 	_ = err
-	//cleanEs, _ := eo.Cfg.BoolOr(fmt.Sprintf("handler.%s.remove-index", eo.Name), false)
 	for {
 		msg := <-eo.buffer
 		err := eo.indexDoc(msg)
