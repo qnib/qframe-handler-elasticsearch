@@ -45,20 +45,16 @@
 			"revisionTime": "2017-04-13T19:59:03Z"
 		},
 		{
-			"path": "github.com/qnib/qframe-handler-elasticsearch/mappings",
-			"revision": ""
-		},
-		{
-			"checksumSHA1": "fIb1N7vVsPtIhWtpMrYoPpBMOgo=",
+			"checksumSHA1": "WPkQojKP6vlT7YxeLnhgNVzu8Zw=",
 			"path": "github.com/qnib/qframe-types",
-			"revision": "91a1dc055a31d90e12a700942afd1cf7cf9098a3",
-			"revisionTime": "2017-04-14T10:05:13Z"
+			"revision": "cfdf927d905696850a9cd0102244f078da161804",
+			"revisionTime": "2017-04-14T19:42:06Z"
 		},
 		{
-			"checksumSHA1": "E4pS76cF5huNrgXLvhDe80076BI=",
+			"checksumSHA1": "bJK9UvRZUUZDGJ8zbF7oLZFNsNo=",
 			"path": "github.com/qnib/qframe-utils",
-			"revision": "140411792263db742f70be5bdee66e9acdade5e2",
-			"revisionTime": "2017-04-11T20:26:32Z"
+			"revision": "d7ba720f084e04bcb015cc144149b2abb5f6b294",
+			"revisionTime": "2017-04-14T19:04:25Z"
 		},
 		{
 			"checksumSHA1": "m8hYD/alsufIYIM7sR06wbL+dKo=",
