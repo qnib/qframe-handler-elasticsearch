@@ -116,19 +116,23 @@ func (eo *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
 		eo.createIndex()
 		eo.last = now
 	}
+	data := map[string]interface{}{
+		"msg_version": msg.QmsgVersion,
+		"Timestamp": msg.Time.Format("2006-01-02T15:04:05.999999-07:00"),
+		"msg":       msg.Msg,
+		"source":    msg.Source,
+		"type":      msg.Type,
+		"host":      msg.Host,
+		"Level":     msg.Level,
+	}
+	for k, v := range msg.KV {
+		data[k] = v
+		//fmt.Printf("%+15s: %s\n", k, v)
+	}
 	d := goes.Document{
 		Index: eo.indexName,
 		Type:  "log",
-		Fields: map[string]interface{}{
-			"_msg_version": msg.qmsgVersion,
-			"Timestamp": msg.Time.Format("2006-01-02T15:04:05.999999-07:00"),
-			"msg":       msg.Msg,
-			"source":    msg.Source,
-			"type":      msg.Type,
-			"host":      msg.Host,
-			"Level":     msg.Level,
-			"kv":		 msg.KV,
-		},
+		Fields: data,
 	}
 	extraArgs := make(url.Values, 1)
 	//extraArgs.Set("ttl", "86400000")
