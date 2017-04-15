@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	version = "0.1.3"
+	version = "0.1.4"
 )
 
 // Elasticsearch holds a buffer and the initial information from the server
