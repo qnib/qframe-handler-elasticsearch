@@ -59,14 +59,16 @@ func (p *Elasticsearch) pushToBuffer() {
 		val := bg.Recv()
 		switch val.(type) {
 		case qtypes.QMsg:
-			msg := val.(qtypes.QMsg)
-			if len(inputs) != 0 && !qutils.IsLastSource(inputs, msg.Source) {
+			qm := val.(qtypes.QMsg)
+			if len(inputs) != 0 && !qutils.IsLastSource(inputs, qm.Source) {
+				//log.Printf(" [es] (%s) %v - skip_input src:%s not in %v", qm.Source, qm.Msg, qm.Source, inputs)
 				continue
 			}
-			if msg.SourceSuccess != srcSuccess {
+			if qm.SourceSuccess != srcSuccess {
+				//log.Printf(" [es] (%s) %v - skip_success %v", qm.Source, qm.Msg, qm.SourceSuccess)
 				continue
 			}
-			p.buffer <- msg
+			p.buffer <- qm
 		}
 	}
 }
@@ -154,10 +156,10 @@ func (p *Elasticsearch) Run() {
 	p.createIndex()
 	_ = err
 	for {
-		msg := <-p.buffer
-		err := p.indexDoc(msg)
+		qm := <-p.buffer
+		err := p.indexDoc(qm)
 		if err != nil {
-			log.Printf("[EE] Failed to index msg: %s || %v", msg, err)
+			log.Printf("[EE] Failed to index msg: %s || %v", qm, err)
 		}
 	}
 }
