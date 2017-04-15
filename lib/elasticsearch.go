@@ -2,7 +2,6 @@ package qframe_handler_elasticsearch
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -60,12 +59,12 @@ func (p *Elasticsearch) pushToBuffer() {
 		switch val.(type) {
 		case qtypes.QMsg:
 			qm := val.(qtypes.QMsg)
-			if len(inputs) != 0 && !qutils.IsLastSource(inputs, qm.Source) {
-				//log.Printf(" [es] (%s) %v - skip_input src:%s not in %v", qm.Source, qm.Msg, qm.Source, inputs)
+			if len(inputs) != 0 && !qutils.IsInput(inputs, qm.Source) {
+				//p.Log("debug", fmt.Sprintf("(%s) %v - skip_input src:%s not in %v", qm.Source, qm.Msg, qm.Source, inputs))
 				continue
 			}
 			if qm.SourceSuccess != srcSuccess {
-				//log.Printf(" [es] (%s) %v - skip_success %v", qm.Source, qm.Msg, qm.SourceSuccess)
+				//p.Log("debug", fmt.Sprintf("(%s) %v - skip_success %v", qm.Source, qm.Msg, qm.SourceSuccess))
 				continue
 			}
 			p.buffer <- qm
@@ -102,16 +101,16 @@ func (p *Elasticsearch) createIndex() (err error) {
 	indices := []string{p.indexName}
 	idxExist, _ := p.conn.IndicesExist(indices)
 	if idxExist {
-		log.Printf("[DD] Index '%s' already exists", p.indexName)
+		//p.Log("debug", fmt.Sprintf("Index '%s' already exists", p.indexName)
 		return err
 	}
-	log.Printf("[DD] Index '%v' does not exists", indices)
+	//log.Printf("[DD] Index '%v' does not exists", indices)
 	_, err = p.conn.CreateIndex(p.indexName, idxCfg)
 	if err != nil {
-		log.Printf("[WW] Index '%s' could not be created", p.indexName)
+		//p.Log("warn", fmt.Sprintf("Index '%s' could not be created", p.indexName)
 		return err
 	}
-	log.Printf("[DD] Created index '%s'.", p.indexName)
+	p.Log("debug", fmt.Sprintf("Created index '%s'.", p.indexName))
 	return err
 }
 
@@ -150,7 +149,7 @@ func (p *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
 
 // Run pushes the logs to elasticsearch
 func (p *Elasticsearch) Run() {
-	log.Printf("[II] Start elasticsearch handler: %sv%s", p.Name, version)
+	p.Log("info", fmt.Sprintf("Start elasticsearch handler: %sv%s", p.Name, version))
 	go p.pushToBuffer()
 	err := p.createESClient()
 	p.createIndex()
@@ -159,7 +158,7 @@ func (p *Elasticsearch) Run() {
 		qm := <-p.buffer
 		err := p.indexDoc(qm)
 		if err != nil {
-			log.Printf("[EE] Failed to index msg: %s || %v", qm, err)
+			p.Log("error", fmt.Sprintf("Failed to index msg: %s || %v", qm, err))
 		}
 	}
 }
