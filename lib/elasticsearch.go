@@ -10,6 +10,7 @@ import (
 	"github.com/zpatrick/go-config"
 	"github.com/qnib/qframe-types"
 	"github.com/qnib/qframe-utils"
+	"github.com/qnib/qframe-collector-gelf/lib"
 )
 
 const (
@@ -133,6 +134,17 @@ func (p *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
 	}
 	if len(msg.KV) != 0 {
 		data[msg.Source] = msg.KV
+	}
+	switch msg.Data.(type){
+	case qframe_collector_gelf.GelfMsg:
+		//p.Log("debug", "msg-data is GELF msg...")
+		gmsg := msg.Data.(qframe_collector_gelf.GelfMsg)
+		data["container_id"] = gmsg.ContainerID
+		data["container_name"] = gmsg.ContainerName
+		data["container_cmd"] = gmsg.Command
+		data["container_host"] = gmsg.Host
+		data["image_id"] = gmsg.ImageID
+		data["image_name"] = gmsg.ImageName
 	}
 	d := goes.Document{
 		Index: p.indexName,
