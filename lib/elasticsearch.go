@@ -15,6 +15,8 @@ import (
 
 const (
 	version = "0.1.4"
+	pluginTyp = "handler"
+
 )
 
 // Elasticsearch holds a buffer and the initial information from the server
@@ -30,17 +32,15 @@ type Elasticsearch struct {
 // NewElasticsearch returns an initial instance
 func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasticsearch {
 	p := Elasticsearch{
-		Plugin: qtypes.NewPlugin(qChan, cfg),
+		Plugin: qtypes.NewNamedPlugin(qChan, cfg, pluginTyp, name, version),
 		buffer: make(chan qtypes.QMsg, 1000),
 	}
-	p.Name = name
-	p.Version = version
 	nameSplit := strings.Split(p.Name, "_")
 	idxDef := p.Name
 	if len(nameSplit) != 0 {
 		idxDef = nameSplit[len(nameSplit)-1]
 	}
-	idx, _ := cfg.StringOr(fmt.Sprintf("handler.%s.index-prefix", name), idxDef)
+	idx := p.CfgStringOr("index-prefix", idxDef)
 	p.indexPrefix = idx
 	p.last = time.Now().Add(-24*time.Hour)
 	return p
