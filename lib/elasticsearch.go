@@ -49,11 +49,7 @@ func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasti
 // Takes log from framework and buffers it in elasticsearch buffer
 func (p *Elasticsearch) pushToBuffer() {
 	bg := p.QChan.Data.Join()
-	inStr, err := p.Cfg.String(fmt.Sprintf("handler.%s.inputs", p.Name))
-	if err != nil {
-		inStr = ""
-	}
-	inputs := strings.Split(inStr, ",")
+	inputs := p.GetInputs()
 	srcSuccess, _ := p.Cfg.BoolOr(fmt.Sprintf("handler.%s.source-success", p.Name), true)
 	for {
 		val := bg.Recv()
