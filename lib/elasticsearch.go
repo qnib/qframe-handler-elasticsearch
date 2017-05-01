@@ -7,53 +7,48 @@ import (
 	"time"
 
 	"github.com/OwnLocal/goes"
-	"github.com/zpatrick/go-config"
+	"github.com/qnib/qframe-collector-gelf/lib"
 	"github.com/qnib/qframe-types"
 	"github.com/qnib/qframe-utils"
-	"github.com/qnib/qframe-collector-gelf/lib"
+	"github.com/zpatrick/go-config"
 )
 
 const (
-	version = "0.1.5"
+	version   = "0.1.6"
+	pluginTyp = "handler"
 )
 
 // Elasticsearch holds a buffer and the initial information from the server
 type Elasticsearch struct {
 	qtypes.Plugin
-	buffer 		chan qtypes.QMsg
-	indexPrefix	string
-	indexName	string
-	last   		time.Time
-	conn 	 	*goes.Connection
+	buffer      chan qtypes.QMsg
+	indexPrefix string
+	indexName   string
+	last        time.Time
+	conn        *goes.Connection
 }
 
 // NewElasticsearch returns an initial instance
 func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasticsearch {
 	p := Elasticsearch{
-		Plugin: qtypes.NewPlugin(qChan, cfg),
+		Plugin: qtypes.NewNamedPlugin(qChan, cfg, pluginTyp, name, version),
 		buffer: make(chan qtypes.QMsg, 1000),
 	}
-	p.Name = name
-	p.Version = version
 	nameSplit := strings.Split(p.Name, "_")
 	idxDef := p.Name
 	if len(nameSplit) != 0 {
 		idxDef = nameSplit[len(nameSplit)-1]
 	}
-	idx, _ := cfg.StringOr(fmt.Sprintf("handler.%s.index-prefix", name), idxDef)
+	idx := p.CfgStringOr("index-prefix", idxDef)
 	p.indexPrefix = idx
-	p.last = time.Now().Add(-24*time.Hour)
+	p.last = time.Now().Add(-24 * time.Hour)
 	return p
 }
 
 // Takes log from framework and buffers it in elasticsearch buffer
 func (p *Elasticsearch) pushToBuffer() {
 	bg := p.QChan.Data.Join()
-	inStr, err := p.Cfg.String(fmt.Sprintf("handler.%s.inputs", p.Name))
-	if err != nil {
-		inStr = ""
-	}
-	inputs := strings.Split(inStr, ",")
+	inputs := p.GetInputs()
 	srcSuccess, _ := p.Cfg.BoolOr(fmt.Sprintf("handler.%s.source-success", p.Name), true)
 	for {
 		val := bg.Recv()
@@ -84,20 +79,20 @@ func (p *Elasticsearch) createESClient() (err error) {
 
 func (p *Elasticsearch) createIndex() (err error) {
 	idxCfg := map[string]interface{}{
-  	"settings": map[string]interface{}{
-      "index.number_of_shards":   1,
-      "index.number_of_replicas": 0,
-    },
-    "mappings": map[string]interface{}{
-      "_default_": map[string]interface{}{
-        "_source": map[string]interface{}{
-          "enabled": true,
-        },
-        "_all": map[string]interface{}{
-          "enabled": false,
-        },
-      },
-    },
+		"settings": map[string]interface{}{
+			"index.number_of_shards":   1,
+			"index.number_of_replicas": 0,
+		},
+		"mappings": map[string]interface{}{
+			"_default_": map[string]interface{}{
+				"_source": map[string]interface{}{
+					"enabled": true,
+				},
+				"_all": map[string]interface{}{
+					"enabled": false,
+				},
+			},
+		},
 	}
 	indices := []string{p.indexName}
 	idxExist, _ := p.conn.IndicesExist(indices)
@@ -123,19 +118,19 @@ func (p *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
 		p.last = now
 	}
 	data := map[string]interface{}{
-		"msg_version": 	msg.QmsgVersion,
-		"Timestamp": 	msg.Time.Format("2006-01-02T15:04:05.999999-07:00"),
-		"msg":       	msg.Msg,
-		"source":    	msg.Source,
-		"source_path":  msg.SourcePath,
-		"type":      	msg.Type,
-		"host":      	msg.Host,
-		"Level":     	msg.Level,
+		"msg_version": msg.QmsgVersion,
+		"Timestamp":   msg.Time.Format("2006-01-02T15:04:05.999999-07:00"),
+		"msg":         msg.Msg,
+		"source":      msg.Source,
+		"source_path": msg.SourcePath,
+		"type":        msg.Type,
+		"host":        msg.Host,
+		"Level":       msg.Level,
 	}
 	if len(msg.KV) != 0 {
 		data[msg.Source] = msg.KV
 	}
-	switch msg.Data.(type){
+	switch msg.Data.(type) {
 	case qframe_collector_gelf.GelfMsg:
 		//p.Log("debug", "msg-data is GELF msg...")
 		gmsg := msg.Data.(qframe_collector_gelf.GelfMsg)
@@ -147,8 +142,8 @@ func (p *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
 		data["image_name"] = gmsg.ImageName
 	}
 	d := goes.Document{
-		Index: p.indexName,
-		Type:  "log",
+		Index:  p.indexName,
+		Type:   "log",
 		Fields: data,
 	}
 	extraArgs := make(url.Values, 1)
