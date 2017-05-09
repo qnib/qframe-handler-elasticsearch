@@ -21,7 +21,7 @@ const (
 // Elasticsearch holds a buffer and the initial information from the server
 type Elasticsearch struct {
 	qtypes.Plugin
-	buffer      chan qtypes.QMsg
+	buffer      chan interface{}
 	indexPrefix string
 	indexName   string
 	last        time.Time
@@ -32,7 +32,7 @@ type Elasticsearch struct {
 func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasticsearch {
 	p := Elasticsearch{
 		Plugin: qtypes.NewNamedPlugin(qChan, cfg, pluginTyp, name, version),
-		buffer: make(chan qtypes.QMsg, 1000),
+		buffer: make(chan interface{}, 1000),
 	}
 	nameSplit := strings.Split(p.Name, "_")
 	idxDef := p.Name
@@ -49,7 +49,7 @@ func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasti
 func (p *Elasticsearch) pushToBuffer() {
 	bg := p.QChan.Data.Join()
 	inputs := p.GetInputs()
-	srcSuccess, _ := p.Cfg.BoolOr(fmt.Sprintf("handler.%s.source-success", p.Name), true)
+	srcSuccess := p.CfgBoolOr("source-success", true)
 	for {
 		val := bg.Recv()
 		switch val.(type) {
@@ -63,14 +63,25 @@ func (p *Elasticsearch) pushToBuffer() {
 				//p.Log("debug", fmt.Sprintf("(%s) %v - skip_success %v", qm.Source, qm.Msg, qm.SourceSuccess))
 				continue
 			}
+			p.Log("info", fmt.Sprintf("qtypes.QMsg from '%v' || %s", qm.SourcePath, qm.Msg))
 			p.buffer <- qm
+		case qtypes.Message:
+			msg := val.(qtypes.Message)
+			if ! msg.InputsMatch(inputs) {
+				continue
+			}
+			if msg.SourceSuccess != srcSuccess {
+				continue
+			}
+			p.Log("info", fmt.Sprintf("qtypes.Message from '%v' || CNT : %s -> %s", msg.SourcePath, msg.GetContainerName(), msg.Message))
+			p.buffer <- msg
 		}
 	}
 }
 
 func (p *Elasticsearch) createESClient() (err error) {
-	host, _ := p.Cfg.StringOr(fmt.Sprintf("handler.%s.host", p.Name), "localhost")
-	port, _ := p.Cfg.StringOr(fmt.Sprintf("handler.%s.port", p.Name), "9200")
+	host := p.CfgStringOr("host", "localhost")
+	port := p.CfgStringOr("port", "9200")
 	now := time.Now()
 	p.indexName = fmt.Sprintf("%s-%04d-%02d-%02d", p.indexPrefix, now.Year(), now.Month(), now.Day())
 	p.conn = goes.NewConnection(host, port)
@@ -110,13 +121,7 @@ func (p *Elasticsearch) createIndex() (err error) {
 	return err
 }
 
-func (p *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
-	now := time.Now()
-	if p.last.Day() != now.Day() {
-		p.indexName = fmt.Sprintf("%s-%04d-%02d-%02d", p.indexPrefix, now.Year(), now.Month(), now.Day())
-		p.createIndex()
-		p.last = now
-	}
+func (p *Elasticsearch) indexQMsg(msg qtypes.QMsg) error {
 	data := map[string]interface{}{
 		"msg_version": msg.QmsgVersion,
 		"Timestamp":   msg.Time.Format("2006-01-02T15:04:05.999999-07:00"),
@@ -152,6 +157,67 @@ func (p *Elasticsearch) indexDoc(msg qtypes.QMsg) error {
 	_ = response
 	//fmt.Printf("%s | %s\n", d, response.Error)
 	return err
+}
+
+func (p *Elasticsearch) indexMessage(msg qtypes.Message) (err error) {
+	data := map[string]interface{}{
+		"msg_version": 	msg.BaseVersion,
+		"Timestamp":   	msg.Time.Format("2006-01-02T15:04:05.999999-07:00"),
+		"msg":         	msg.Message,
+		"source_path": 	strings.Join(msg.SourcePath,","),
+		"host":        	msg.KV["host"],
+		//"Level":   		msg.LogLevel,
+	}
+
+	for k,v := range msg.KV {
+		key := fmt.Sprintf("%s.%s", msg.Name, k)
+		data[key] = v
+	}
+
+	if msg.GetContainerName() != "" {
+		data["container_id"] = msg.Container.ID
+		data["container_name"] = msg.GetContainerName()
+		data["container_cmd"] = strings.Join(msg.Container.Config.Cmd, " ")
+		data["image"] = msg.Container.Image
+		data["image_name"] = msg.Container.Config.Image
+		if msg.Container.Node != nil {
+			p.Log("info", "Set msg.Container.Node")
+			//data["node_name"] = msg.Container.Node.Name
+			//data["node_ip"] = msg.Container.Node.IPAddress
+		}
+	}
+
+	for k,v := range data {
+		fmt.Printf("%15s: %s\n", k, v)
+	}
+	d := goes.Document{
+		Index:  p.indexName,
+		Type:   msg.MessageType,
+		Fields: data,
+	}
+	extraArgs := make(url.Values, 1)
+	//extraArgs.Set("ttl", "86400000")
+	response, err := p.conn.Index(d, extraArgs)
+	_ = response
+	return
+}
+
+func (p *Elasticsearch) indexDoc(doc interface{}) (err error) {
+	now := time.Now()
+	if p.last.Day() != now.Day() {
+		p.indexName = fmt.Sprintf("%s-%04d-%02d-%02d", p.indexPrefix, now.Year(), now.Month(), now.Day())
+		p.createIndex()
+		p.last = now
+	}
+	switch doc.(type) {
+	case qtypes.QMsg:
+		msg := doc.(qtypes.QMsg)
+		return p.indexQMsg(msg)
+	case qtypes.Message:
+		msg := doc.(qtypes.Message)
+		return p.indexMessage(msg)
+	}
+	return
 }
 
 // Run pushes the logs to elasticsearch
