@@ -16,6 +16,7 @@ import (
 const (
 	version   = "0.1.7"
 	pluginTyp = "handler"
+	pluginPkg = "elasticsearch"
 )
 
 // Elasticsearch holds a buffer and the initial information from the server
@@ -24,6 +25,8 @@ type Elasticsearch struct {
 	buffer      chan interface{}
 	indexPrefix string
 	indexName   string
+	KVtoFields  map[string]string
+	SkipKV		[]string
 	last        time.Time
 	conn        *goes.Connection
 }
@@ -31,7 +34,7 @@ type Elasticsearch struct {
 // NewElasticsearch returns an initial instance
 func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasticsearch {
 	p := Elasticsearch{
-		Plugin: qtypes.NewNamedPlugin(qChan, cfg, pluginTyp, name, version),
+		Plugin: qtypes.NewNamedPlugin(qChan, cfg, pluginTyp, pluginPkg,  name, version),
 		buffer: make(chan interface{}, 1000),
 	}
 	nameSplit := strings.Split(p.Name, "_")
@@ -40,9 +43,30 @@ func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasti
 		idxDef = nameSplit[len(nameSplit)-1]
 	}
 	idx := p.CfgStringOr("index-prefix", idxDef)
+	p.ParseKVtoFields()
+	p.ParseSkipKV()
 	p.indexPrefix = idx
 	p.last = time.Now().Add(-24 * time.Hour)
 	return p
+}
+
+func (p *Elasticsearch) ParseSkipKV() {
+	kvCfg := p.CfgStringOr("kv-skip", "")
+	p.SkipKV = strings.Split(kvCfg, ",")
+}
+
+func (p *Elasticsearch) ParseKVtoFields() {
+	p.KVtoFields = map[string]string{}
+	kvCfg := p.CfgStringOr("kv-to-field", "")
+	for _, tuple := range strings.Split(kvCfg, ",") {
+		slice := strings.Split(tuple, ":")
+		if len(slice) != 2 {
+			p.Log("error", fmt.Sprintf("Could not split kv-to-field by ':': %s", tuple))
+			return
+		}
+		p.Log("info", fmt.Sprintf("KV key '%s' will replace '%s' when indexing", slice[0], slice[1]))
+		p.KVtoFields[slice[0]] = slice[1]
+	}
 }
 
 // Takes log from framework and buffers it in elasticsearch buffer
@@ -67,13 +91,13 @@ func (p *Elasticsearch) pushToBuffer() {
 			p.buffer <- qm
 		case qtypes.Message:
 			msg := val.(qtypes.Message)
+			p.Log("info", msg.Message)
 			if ! msg.InputsMatch(inputs) {
 				continue
 			}
 			if msg.SourceSuccess != srcSuccess {
 				continue
 			}
-			p.Log("info", fmt.Sprintf("qtypes.Message from '%v' || CNT : %s -> %s", msg.SourcePath, msg.GetContainerName(), msg.Message))
 			p.buffer <- msg
 		}
 	}
@@ -165,13 +189,24 @@ func (p *Elasticsearch) indexMessage(msg qtypes.Message) (err error) {
 		"Timestamp":   	msg.Time.Format("2006-01-02T15:04:05.999999-07:00"),
 		"msg":         	msg.Message,
 		"source_path": 	strings.Join(msg.SourcePath,","),
-		"host":        	msg.KV["host"],
-		//"Level":   		msg.LogLevel,
+		"Level":   		msg.LogLevel,
 	}
 
+	if host, ok := msg.KV["host"]; ok {
+		data["host"] = host
+	}
 	for k,v := range msg.KV {
 		key := fmt.Sprintf("%s.%s", msg.Name, k)
-		data[key] = v
+		if qutils.IsItem(p.SkipKV, key) {
+			p.Log("debug", fmt.Sprintf("Skip key %s in qm.KV", key))
+		} else {
+			if nKey, ok := p.KVtoFields[key]; ok {
+				p.Log("debug", fmt.Sprintf("Overwrite field '%s' with %s", nKey, v))
+				data[nKey] = v
+			} else {
+				data[key] = v
+			}
+		}
 	}
 
 	if msg.GetContainerName() != "" {
@@ -185,10 +220,10 @@ func (p *Elasticsearch) indexMessage(msg qtypes.Message) (err error) {
 			//data["node_name"] = msg.Container.Node.Name
 			//data["node_ip"] = msg.Container.Node.IPAddress
 		}
-	}
 
+	}
 	for k,v := range data {
-		fmt.Printf("%15s: %s\n", k, v)
+		p.Log("info", fmt.Sprintf("%30s: %s", k, v))
 	}
 	d := goes.Document{
 		Index:  p.indexName,
@@ -222,7 +257,7 @@ func (p *Elasticsearch) indexDoc(doc interface{}) (err error) {
 
 // Run pushes the logs to elasticsearch
 func (p *Elasticsearch) Run() {
-	p.Log("info", fmt.Sprintf("Start elasticsearch handler: %sv%s", p.Name, version))
+	p.Log("notice", fmt.Sprintf("Start elasticsearch handler: %sv%s", p.Name, version))
 	go p.pushToBuffer()
 	err := p.createESClient()
 	p.createIndex()
