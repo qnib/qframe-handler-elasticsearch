@@ -108,6 +108,7 @@ func (p *Elasticsearch) createESClient() (err error) {
 	port := p.CfgStringOr("port", "9200")
 	now := time.Now()
 	p.indexName = fmt.Sprintf("%s-%04d-%02d-%02d", p.indexPrefix, now.Year(), now.Month(), now.Day())
+	p.Log("info", fmt.Sprintf("Connecting to %s:%s", host, port))
 	p.conn = goes.NewConnection(host, port)
 	return
 }
