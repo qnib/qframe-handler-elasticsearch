@@ -32,7 +32,7 @@ type Elasticsearch struct {
 }
 
 // NewElasticsearch returns an initial instance
-func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasticsearch {
+func New(qChan qtypes.QChan, cfg *config.Config, name string) (Elasticsearch, error) {
 	p := Elasticsearch{
 		Plugin: qtypes.NewNamedPlugin(qChan, cfg, pluginTyp, pluginPkg,  name, version),
 		buffer: make(chan interface{}, 1000),
@@ -47,7 +47,7 @@ func NewElasticsearch(qChan qtypes.QChan, cfg config.Config, name string) Elasti
 	p.ParseSkipKV()
 	p.indexPrefix = idx
 	p.last = time.Now().Add(-24 * time.Hour)
-	return p
+	return p, nil
 }
 
 func (p *Elasticsearch) ParseSkipKV() {
