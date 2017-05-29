@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/OwnLocal/goes"
-	"github.com/qnib/qframe-collector-gelf/lib"
 	"github.com/qnib/qframe-types"
 	"github.com/qnib/qframe-utils"
 	"github.com/zpatrick/go-config"
@@ -161,9 +160,9 @@ func (p *Elasticsearch) indexQMsg(msg qtypes.QMsg) error {
 		data[msg.Source] = msg.KV
 	}
 	switch msg.Data.(type) {
-	case qframe_collector_gelf.GelfMsg:
+	case qtypes.GelfMsg:
 		//p.Log("debug", "msg-data is GELF msg...")
-		gmsg := msg.Data.(qframe_collector_gelf.GelfMsg)
+		gmsg := msg.Data.(qtypes.GelfMsg)
 		data["container_id"] = gmsg.ContainerID
 		data["container_name"] = gmsg.ContainerName
 		data["container_cmd"] = gmsg.Command
