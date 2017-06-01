@@ -221,7 +221,7 @@ func (p *Elasticsearch) indexContainerEvent(msg qtypes.ContainerEvent) (err erro
 	}
 	d := goes.Document{
 		Index:  p.indexName,
-		Type:   msg.MessageType,
+		Type:   "container-event",
 		Fields: data,
 	}
 	extraArgs := make(url.Values, 1)
