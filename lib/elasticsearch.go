@@ -98,6 +98,18 @@ func (p *Elasticsearch) pushToBuffer() {
 				continue
 			}
 			p.buffer <- msg
+		case qtypes.ContainerEvent:
+			msg := val.(qtypes.ContainerEvent)
+			p.Log("info", msg.Message)
+			if ! msg.InputsMatch(inputs) {
+				continue
+			}
+			if msg.SourceSuccess != srcSuccess {
+				continue
+			}
+			p.buffer <- msg
+
+
 		}
 	}
 }
@@ -183,6 +195,42 @@ func (p *Elasticsearch) indexQMsg(msg qtypes.QMsg) error {
 	return err
 }
 
+func (p *Elasticsearch) indexContainerEvent(msg qtypes.ContainerEvent) (err error) {
+	data := map[string]interface{}{
+		"msg_version": 	msg.BaseVersion,
+		"Timestamp":   	msg.Time.Format("2006-01-02T15:04:05.999999-07:00"),
+		"msg":         	msg.Message,
+		"source_path": 	strings.Join(msg.SourcePath,","),
+	}
+
+	if msg.GetContainerName() != "" {
+		data["container_id"] = msg.Container.ID
+		data["container_name"] = msg.GetContainerName()
+		data["container_cmd"] = strings.Join(msg.Container.Config.Cmd, " ")
+		data["image"] = msg.Container.Image
+		data["image_name"] = msg.Container.Config.Image
+		if msg.Container.Node != nil {
+			p.Log("info", "Set msg.Container.Node")
+			//data["node_name"] = msg.Container.Node.Name
+			//data["node_ip"] = msg.Container.Node.IPAddress
+		}
+
+	}
+	for k,v := range data {
+		p.Log("info", fmt.Sprintf("%30s: %s", k, v))
+	}
+	d := goes.Document{
+		Index:  p.indexName,
+		Type:   msg.MessageType,
+		Fields: data,
+	}
+	extraArgs := make(url.Values, 1)
+	//extraArgs.Set("ttl", "86400000")
+	response, err := p.conn.Index(d, extraArgs)
+	_ = response
+	return
+}
+
 func (p *Elasticsearch) indexMessage(msg qtypes.Message) (err error) {
 	data := map[string]interface{}{
 		"msg_version": 	msg.BaseVersion,
@@ -251,6 +299,9 @@ func (p *Elasticsearch) indexDoc(doc interface{}) (err error) {
 	case qtypes.Message:
 		msg := doc.(qtypes.Message)
 		return p.indexMessage(msg)
+	case qtypes.ContainerEvent:
+		msg := doc.(qtypes.ContainerEvent)
+		return p.indexContainerEvent(msg)
 	}
 	return
 }
