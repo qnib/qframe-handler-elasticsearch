@@ -210,14 +210,14 @@ func (p *Elasticsearch) indexContainerEvent(msg qtypes.ContainerEvent) (err erro
 		data["image"] = msg.Container.Image
 		data["image_name"] = msg.Container.Config.Image
 		if msg.Container.Node != nil {
-			p.Log("info", "Set msg.Container.Node")
+			p.Log("debug", "Set msg.Container.Node")
 			//data["node_name"] = msg.Container.Node.Name
 			//data["node_ip"] = msg.Container.Node.IPAddress
 		}
 
 	}
 	for k,v := range data {
-		p.Log("info", fmt.Sprintf("%30s: %s", k, v))
+		p.Log("trace", fmt.Sprintf("%30s: %s", k, v))
 	}
 	d := goes.Document{
 		Index:  p.indexName,
@@ -264,14 +264,14 @@ func (p *Elasticsearch) indexMessage(msg qtypes.Message) (err error) {
 		data["image"] = msg.Container.Image
 		data["image_name"] = msg.Container.Config.Image
 		if msg.Container.Node != nil {
-			p.Log("info", "Set msg.Container.Node")
+			p.Log("debug", "Set msg.Container.Node")
 			//data["node_name"] = msg.Container.Node.Name
 			//data["node_ip"] = msg.Container.Node.IPAddress
 		}
 
 	}
 	for k,v := range data {
-		p.Log("info", fmt.Sprintf("%30s: %s", k, v))
+		p.Log("trace", fmt.Sprintf("%30s: %s", k, v))
 	}
 	d := goes.Document{
 		Index:  p.indexName,
