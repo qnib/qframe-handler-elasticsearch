@@ -86,11 +86,11 @@ func (p *Elasticsearch) pushToBuffer() {
 				//p.Log("debug", fmt.Sprintf("(%s) %v - skip_success %v", qm.Source, qm.Msg, qm.SourceSuccess))
 				continue
 			}
-			p.Log("info", fmt.Sprintf("qtypes.QMsg from '%v' || %s", qm.SourcePath, qm.Msg))
+			p.Log("trace", fmt.Sprintf("qtypes.QMsg from '%v' || %s", qm.SourcePath, qm.Msg))
 			p.buffer <- qm
 		case qtypes.Message:
 			msg := val.(qtypes.Message)
-			p.Log("info", msg.Message)
+			p.Log("trace", msg.Message)
 			if ! msg.InputsMatch(inputs) {
 				continue
 			}
@@ -100,7 +100,7 @@ func (p *Elasticsearch) pushToBuffer() {
 			p.buffer <- msg
 		case qtypes.ContainerEvent:
 			msg := val.(qtypes.ContainerEvent)
-			p.Log("info", msg.Message)
+			p.Log("trace", msg.Message)
 			if ! msg.InputsMatch(inputs) {
 				continue
 			}
