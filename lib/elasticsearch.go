@@ -202,7 +202,9 @@ func (p *Elasticsearch) indexContainerEvent(msg qtypes.ContainerEvent) (err erro
 		"msg":         	msg.Message,
 		"source_path": 	strings.Join(msg.SourcePath,","),
 	}
-
+	for k,v := range msg.Data {
+		data[k] = v
+	}
 	if msg.GetContainerName() != "" {
 		data["container_id"] = msg.Container.ID
 		data["container_name"] = msg.GetContainerName()
@@ -242,6 +244,9 @@ func (p *Elasticsearch) indexMessage(msg qtypes.Message) (err error) {
 
 	if host, ok := msg.KV["host"]; ok {
 		data["host"] = host
+	}
+	for k,v := range msg.Data {
+		data[k] = v
 	}
 	for k,v := range msg.KV {
 		key := fmt.Sprintf("%s.%s", msg.Name, k)
