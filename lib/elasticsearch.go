@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	version   = "0.1.11"
+	version   = "0.1.12"
 	pluginTyp = "handler"
 	pluginPkg = "elasticsearch"
 )
