@@ -90,7 +90,6 @@ func (p *Elasticsearch) pushToBuffer() {
 			p.buffer <- qm
 		case qtypes.Message:
 			msg := val.(qtypes.Message)
-			p.Log("trace", msg.Message)
 			if ! msg.InputsMatch(inputs) {
 				continue
 			}
@@ -100,7 +99,6 @@ func (p *Elasticsearch) pushToBuffer() {
 			p.buffer <- msg
 		case qtypes.ContainerEvent:
 			msg := val.(qtypes.ContainerEvent)
-			p.Log("trace", msg.Message)
 			if ! msg.InputsMatch(inputs) {
 				continue
 			}
@@ -275,6 +273,8 @@ func (p *Elasticsearch) indexMessage(msg qtypes.Message) (err error) {
 		}
 
 	}
+	p.Log("trace", fmt.Sprintf("%30s: %s", "_id", msg.ID))
+	p.Log("trace", fmt.Sprintf("%30s: %s", "_type", msg.MessageType))
 	for k,v := range data {
 		p.Log("trace", fmt.Sprintf("%30s: %s", k, v))
 	}
@@ -282,6 +282,9 @@ func (p *Elasticsearch) indexMessage(msg qtypes.Message) (err error) {
 		Index:  p.indexName,
 		Type:   msg.MessageType,
 		Fields: data,
+	}
+	if msg.ID != "" {
+		d.Id = msg.ID
 	}
 	extraArgs := make(url.Values, 1)
 	//extraArgs.Set("ttl", "86400000")
@@ -323,6 +326,8 @@ func (p *Elasticsearch) Run() {
 		err := p.indexDoc(qm)
 		if err != nil {
 			p.Log("error", fmt.Sprintf("Failed to index msg: %s || %v", qm, err))
+		} else {
+			p.Log("trace", "Indexed message...")
 		}
 	}
 }
