@@ -226,7 +226,6 @@
 		},
 		{
 			"checksumSHA1": "UmXGieuTJQOzJPspPJTVKKKMiUA=",
-			"origin": "github.com/qnib/qframe-handler-elasticsearch/vendor/github.com/docker/go-units",
 			"path": "github.com/docker/go-units",
 			"revision": "0dadbb0345b35ec7ef35e228dabb8de89a65bf52",
 			"revisionTime": "2017-01-27T09:51:30Z"
@@ -376,10 +375,10 @@
 			"revisionTime": "2017-04-13T19:59:03Z"
 		},
 		{
-			"checksumSHA1": "1/w9AjJTwCYpMeOjAEylK32+f6c=",
+			"checksumSHA1": "PTmGKQr6Tj7F4NAeQr3end3khEA=",
 			"path": "github.com/qnib/qframe-types",
-			"revision": "54a00334482b220d1473018ee34245573fa0477c",
-			"revisionTime": "2017-06-01T13:19:11Z"
+			"revision": "8f55e9b42bcdb795ccc60045f6930f341e790a70",
+			"revisionTime": "2017-07-12T11:31:37Z"
 		},
 		{
 			"checksumSHA1": "Urhq3MJWVz6GbfE0AFQXkDsSPyQ=",
@@ -401,7 +400,6 @@
 		},
 		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
-			"origin": "github.com/qnib/qframe-handler-elasticsearch/vendor/golang.org/x/net/context",
 			"path": "golang.org/x/net/context",
 			"revision": "3da985ce5951d99de868be4385f21ea6c2b22f24",
 			"revisionTime": "2017-05-27T09:53:06Z"
